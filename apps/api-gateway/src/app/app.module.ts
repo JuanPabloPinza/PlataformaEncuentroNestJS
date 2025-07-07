@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AuthController } from './auth/auth.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { UserController } from './user/user.controller';
+import { EventsController } from './events/events.controller';
 
 @Module({
   imports: [
@@ -24,9 +25,17 @@ import { UserController } from './user/user.controller';
           port: 8878,
         },
       },
+      {
+        name: 'EVENTS-SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: '127.0.0.1',
+          port: 8879,
+        },
+      },
     ]),
   ],
-  controllers: [AppController, AuthController, UserController],
+  controllers: [AppController, AuthController, UserController, EventsController],
   providers: [AppService],
 })
 export class AppModule {}
