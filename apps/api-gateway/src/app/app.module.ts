@@ -5,6 +5,8 @@ import { AuthController } from './auth/auth.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { UserController } from './user/user.controller';
 import { EventsController } from './events/events.controller';
+import { OrdersController } from './orders/orders.controller';
+import { ORDER_SERVICE_RABBITMQ } from '../constants';
 
 @Module({
   imports: [
@@ -33,9 +35,20 @@ import { EventsController } from './events/events.controller';
           port: 8879,
         },
       },
+      {
+        name: ORDER_SERVICE_RABBITMQ,
+        transport: Transport.RMQ,
+        options: {
+          urls: ['amqp://admin:admin@127.0.0.1:5672'],
+          queue: 'orders_queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
     ]),
   ],
-  controllers: [AppController, AuthController, UserController, EventsController],
+  controllers: [AppController, AuthController, UserController, EventsController, OrdersController],
   providers: [AppService],
 })
 export class AppModule {}
