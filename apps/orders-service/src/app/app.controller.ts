@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
 import { CreateOrderDto } from './dto/order.dto';
@@ -18,7 +18,7 @@ export class AppController {
   }
 
   @MessagePattern('get-order-by-id')
-  async getOrderById(@Payload() id: number) {
+  async getOrderById(@Payload() id: string | number) {
     return this.appService.getOrderById(id);
   }
 
@@ -38,7 +38,28 @@ export class AppController {
   }
 
   @MessagePattern('cancel-order')
-  async cancelOrder(@Payload() id: number) {
+  async cancelOrder(@Payload() id: string | number) {
     return this.appService.cancelOrder(id);
+  }
+
+  // Health check endpoint for database connectivity
+  @Get('health')
+  async healthCheck() {
+    try {
+      const result = await this.appService.healthCheck();
+      return {
+        status: 'ok',
+        database: result.database,
+        timestamp: new Date().toISOString(),
+        service: 'orders-service'
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        service: 'orders-service'
+      };
+    }
   }
 }

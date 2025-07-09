@@ -9,19 +9,19 @@ export enum OrderStatus {
 
 @Entity()
 export class Order {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
+  id: string; // Changed to string to handle CockroachDB's large integers
 
-  @Column()
+  @Column('int')
   userId: number;
 
-  @Column()
+  @Column('int')
   eventId: number;
 
-  @Column()
+  @Column('int')
   categoryId: number;
 
-  @Column()
+  @Column('int')
   quantity: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
