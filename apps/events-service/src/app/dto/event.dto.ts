@@ -1,3 +1,10 @@
+import { Role } from '../enums/role.enum';
+
+export class UserContextDto {
+  userId: number;
+  role: Role;
+}
+
 export class CreateTicketCategoryDto {
   categoryName: string;
   price: number;
@@ -12,6 +19,7 @@ export class CreateEventDto {
   eventDate: Date;
   location?: string;
   ticketCategories: CreateTicketCategoryDto[];
+  userContext: UserContextDto; // Add user context for authorization
 }
 
 export class UpdateEventDto {
@@ -21,6 +29,7 @@ export class UpdateEventDto {
   eventDate?: Date;
   location?: string;
   isActive?: boolean;
+  userContext: UserContextDto; // Add user context for authorization
 }
 
 export class UpdateTicketCategoryDto {

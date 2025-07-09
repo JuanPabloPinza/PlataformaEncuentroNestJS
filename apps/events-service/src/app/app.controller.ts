@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
-import { CreateEventDto, UpdateEventDto, ReserveTicketsDto } from './dto/event.dto';
+import { CreateEventDto, UpdateEventDto, ReserveTicketsDto, UserContextDto } from './dto/event.dto';
 
 @Controller()
 export class AppController {
@@ -38,8 +38,8 @@ export class AppController {
   }
 
   @MessagePattern('delete-event')
-  async deleteEvent(@Payload() id: number) {
-    return this.appService.deleteEvent(id);
+  async deleteEvent(@Payload() payload: { id: number; userContext: UserContextDto }) {
+    return this.appService.deleteEvent(payload.id, payload.userContext);
   }
 
   @MessagePattern('get-ticket-categories')

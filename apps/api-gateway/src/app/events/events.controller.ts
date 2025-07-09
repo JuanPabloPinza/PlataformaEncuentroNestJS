@@ -8,7 +8,8 @@ import {
   Param, 
   Inject, 
   UseGuards, 
-  ParseIntPipe 
+  ParseIntPipe,
+  Request 
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -23,9 +24,17 @@ export class EventsController {
 
   @Post()
   @UseGuards(AuthGuard)
-  async createEvent(@Body() createEventDto: CreateEventDto) {
+  async createEvent(@Body() createEventDto: CreateEventDto, @Request() req: any) {
+    const userContext = {
+      userId: req.user.userId,
+      role: req.user.role
+    };
+    
     return await firstValueFrom(
-      this.eventsClient.send('create-event', createEventDto)
+      this.eventsClient.send('create-event', {
+        ...createEventDto,
+        userContext
+      })
     );
   }
 
@@ -61,18 +70,35 @@ export class EventsController {
   @UseGuards(AuthGuard)
   async updateEvent(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateEventDto: UpdateEventDto
+    @Body() updateEventDto: UpdateEventDto,
+    @Request() req: any
   ) {
+    const userContext = {
+      userId: req.user.userId,
+      role: req.user.role
+    };
+    
     return await firstValueFrom(
-      this.eventsClient.send('update-event', { id, updateEventDto })
+      this.eventsClient.send('update-event', { 
+        id, 
+        updateEventDto: {
+          ...updateEventDto,
+          userContext
+        }
+      })
     );
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard)
-  async deleteEvent(@Param('id', ParseIntPipe) id: number) {
+  async deleteEvent(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const userContext = {
+      userId: req.user.userId,
+      role: req.user.role
+    };
+    
     return await firstValueFrom(
-      this.eventsClient.send('delete-event', id)
+      this.eventsClient.send('delete-event', { id, userContext })
     );
   }
 

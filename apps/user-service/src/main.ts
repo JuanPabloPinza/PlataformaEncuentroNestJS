@@ -7,6 +7,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { RpcExceptionFilter } from './filters/rpc-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -17,6 +18,7 @@ async function bootstrap() {
     },
   );
 
+  app.useGlobalFilters(new RpcExceptionFilter());
   await app.listen();
   Logger.log(`🚀 User Service is running on TCP port 8878`);
 }

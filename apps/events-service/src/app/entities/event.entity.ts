@@ -23,6 +23,9 @@ export class Event {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ name: 'created_by' })
+  createdBy: number; // User ID who created this event
+
   @OneToMany('TicketCategory', 'event', { cascade: true })
   ticketCategories: any[];
 

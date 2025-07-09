@@ -11,8 +11,8 @@ export class EventRepository {
     private readonly eventRepository: Repository<Event>,
   ) {}
 
-  async create(createEventDto: CreateEventDto): Promise<Event> {
-    const event = this.eventRepository.create(createEventDto);
+  async create(eventData: Omit<CreateEventDto, 'userContext'> & { createdBy: number }): Promise<Event> {
+    const event = this.eventRepository.create(eventData);
     return this.eventRepository.save(event);
   }
 
@@ -37,7 +37,7 @@ export class EventRepository {
     });
   }
 
-  async update(id: number, updateEventDto: UpdateEventDto): Promise<Event | null> {
+  async update(id: number, updateEventDto: Omit<UpdateEventDto, 'userContext'>): Promise<Event | null> {
     await this.eventRepository.update(id, updateEventDto);
     return this.findById(id);
   }

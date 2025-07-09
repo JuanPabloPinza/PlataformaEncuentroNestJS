@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthController } from './auth/auth.controller';
@@ -7,6 +8,7 @@ import { UserController } from './user/user.controller';
 import { EventsController } from './events/events.controller';
 import { OrdersController } from './orders/orders.controller';
 import { ORDER_SERVICE_RABBITMQ } from '../constants';
+import { RpcExceptionInterceptor } from '../interceptors/rpc-exception.interceptor';
 
 @Module({
   imports: [
@@ -49,6 +51,12 @@ import { ORDER_SERVICE_RABBITMQ } from '../constants';
     ]),
   ],
   controllers: [AppController, AuthController, UserController, EventsController, OrdersController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RpcExceptionInterceptor,
+    },
+  ],
 })
 export class AppModule {}
