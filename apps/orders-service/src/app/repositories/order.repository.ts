@@ -16,8 +16,55 @@ export class OrderRepository {
     return this.orderRepository.save(order);
   }
 
-  async findById(id: number): Promise<Order | null> {
-    return this.orderRepository.findOne({ where: { id } });
+  async findById(id: string | number): Promise<Order | null> {
+    try {
+      // Handle both string and number IDs, especially large CockroachDB IDs
+      let searchId: string;
+      
+      if (typeof id === 'number') {
+        searchId = id.toString();
+      } else {
+        searchId = id;
+      }
+      
+      console.log(`🔍 Searching for order with ID: ${searchId} (type: ${typeof searchId})`);
+      
+      // Use raw query for better large integer handling
+      const result = await this.orderRepository.query(
+        'SELECT * FROM "order" WHERE id = $1 LIMIT 1',
+        [searchId]
+      );
+      
+      if (result && result.length > 0) {
+        // Convert the raw result back to Order entity
+        const rawOrder = result[0];
+        const order = this.orderRepository.create({
+          id: rawOrder.id,
+          userId: rawOrder.userId,
+          eventId: rawOrder.eventId,
+          categoryId: rawOrder.categoryId,
+          quantity: rawOrder.quantity,
+          unitPrice: parseFloat(rawOrder.unitPrice),
+          totalPrice: parseFloat(rawOrder.totalPrice),
+          status: rawOrder.status,
+          eventName: rawOrder.eventName,
+          categoryName: rawOrder.categoryName,
+          notes: rawOrder.notes,
+          createdAt: rawOrder.createdAt,
+          updatedAt: rawOrder.updatedAt,
+        });
+        
+        console.log(`✅ Order found: ${order.id}`);
+        return order;
+      }
+      
+      console.log(`❌ Order not found with ID: ${searchId}`);
+      return null;
+      
+    } catch (error) {
+      console.error(`❌ Error finding order by ID ${id}:`, error.message);
+      return null;
+    }
   }
 
   async findByUserId(userId: number): Promise<Order[]> {
@@ -34,9 +81,11 @@ export class OrderRepository {
     });
   }
 
-  async updateStatus(id: number, status: OrderStatus, notes?: string): Promise<Order | null> {
-    await this.orderRepository.update(id, { status, notes });
-    return this.findById(id);
+  async updateStatus(id: string | number, status: OrderStatus, notes?: string): Promise<Order | null> {
+    // Convert to string if number is passed (for backward compatibility)
+    const searchId = typeof id === 'number' ? id.toString() : id;
+    await this.orderRepository.update(searchId, { status, notes });
+    return this.findById(searchId);
   }
 
   async findAll(): Promise<Order[]> {
@@ -50,5 +99,10 @@ export class OrderRepository {
       where: { status },
       order: { createdAt: 'DESC' }
     });
+  }
+
+  // Raw query method for health checks and custom queries
+  async query(sql: string, parameters?: any[]): Promise<any> {
+    return this.orderRepository.query(sql, parameters);
   }
 }

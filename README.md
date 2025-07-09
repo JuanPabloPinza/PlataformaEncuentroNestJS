@@ -99,3 +99,38 @@ And join the Nx community:
 - [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [Our Youtube channel](https://www.youtube.com/@nxdevtools)
 - [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+## 🚀 Quick Start with CockroachDB
+
+This project now supports **CockroachDB** for distributed database replication! 
+
+### Option 1: CockroachDB Cluster (Recommended for Production)
+```bash
+# Start CockroachDB cluster with Docker
+npm run cockroach:start
+
+# Start all microservices with CockroachDB
+npm run start:all-cockroach
+
+# Test database connectivity
+node test-cockroach-connection.js
+```
+
+### Option 2: Traditional PostgreSQL
+```bash
+# Start all services with PostgreSQL (original setup)
+npm run start:all
+```
+
+### 🗄️ Database Options
+
+| Database | Replication | High Availability | Scaling | Setup Complexity |
+|----------|-------------|------------------|---------|------------------|
+| **CockroachDB** | ✅ Automatic | ✅ Built-in | ✅ Horizontal | 🟢 Simple |
+| PostgreSQL | ❌ Manual | ❌ Manual | ❌ Vertical | 🟢 Simple |
+
+**For production workloads, CockroachDB is strongly recommended.**
+
+📖 **Detailed migration guide**: [COCKROACH_MIGRATION.md](./COCKROACH_MIGRATION.md)
+
+---

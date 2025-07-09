@@ -12,7 +12,7 @@ export class UpdateOrderStatusDto {
 }
 
 export class OrderResponseDto {
-  id: number;
+  id: string; // Changed to string to handle CockroachDB's large integers
   userId: number;
   eventId: number;
   categoryId: number;

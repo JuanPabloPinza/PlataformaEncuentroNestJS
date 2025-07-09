@@ -5,19 +5,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Order } from './entities/order.entity';
 import { OrderRepository } from './repositories/order.repository';
+import { createDatabaseConfig } from './config/database.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: '127.0.0.1',
-      port: 5432,
-      username: 'postgres',
-      password: 'password',
-      database: 'orders_db',
-      entities: [Order],
-      synchronize: true,
-    }),
+    TypeOrmModule.forRoot(createDatabaseConfig()),
     TypeOrmModule.forFeature([Order]),
     ClientsModule.register([
       {

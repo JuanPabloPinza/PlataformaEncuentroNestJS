@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # CockroachDB Node 1
+  cockroach-node1:
+    image: cockroachdb/cockroach:v23.1.0
+    container_name: cockroach-node1
+    hostname: cockroach-node1
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    command: start --insecure --join=cockroach-node1,cockroach-node2 --cache=.25 --max-sql-memory=.25
+    volumes:
+      - cockroach-node1-data:/cockroach/cockroach-data
+    networks:
+      - cockroach-net
+    environment:
+      - COCKROACH_CHANNEL=kubernetes-insecure
+
+  # CockroachDB Node 2
+  cockroach-node2:
+    image: cockroachdb/cockroach:v23.1.0
+    container_name: cockroach-node2
+    hostname: cockroach-node2
+    ports:
+      - "26258:26257"
+      - "8081:8080"
+    command: start --insecure --join=cockroach-node1,cockroach-node2 --cache=.25 --max-sql-memory=.25
+    volumes:
+      - cockroach-node2-data:/cockroach/cockroach-data
+    networks:
+      - cockroach-net
+    environment:
+      - COCKROACH_CHANNEL=kubernetes-insecure
+    depends_on:
+      - cockroach-node1
+
+  # CockroachDB Cluster Initialization
+  cockroach-init:
+    image: cockroachdb/cockroach:v23.1.0
+    container_name: cockroach-init
+    command: init --insecure --host=cockroach-node1
+    networks:
+      - cockroach-net
+    depends_on:
+      - cockroach-node1
+      - cockroach-node2
+    restart: "no"
+
+  # Database Setup Service
+  cockroach-setup:
+    image: cockroachdb/cockroach:v23.1.0
+    container_name: cockroach-setup
+    command: |
+      bash -c "
+        sleep 10
+        echo 'Creating databases...'
+        cockroach sql --insecure --host=cockroach-node1 --execute='CREATE DATABASE IF NOT EXISTS orders_db;'
+        cockroach sql --insecure --host=cockroach-node1 --execute='CREATE DATABASE IF NOT EXISTS events_db;'
+        cockroach sql --insecure --host=cockroach-node1 --execute='CREATE DATABASE IF NOT EXISTS user_db;'
+        echo 'Creating user for orders service...'
+        cockroach sql --insecure --host=cockroach-node1 --execute='CREATE USER IF NOT EXISTS orders_user;'
+        cockroach sql --insecure --host=cockroach-node1 --execute='GRANT ALL ON DATABASE orders_db TO orders_user;'
+        cockroach sql --insecure --host=cockroach-node1 --execute='GRANT ALL ON DATABASE events_db TO orders_user;'
+        cockroach sql --insecure --host=cockroach-node1 --execute='GRANT ALL ON DATABASE user_db TO orders_user;'
+        echo 'Database setup completed!'
+      "
+    networks:
+      - cockroach-net
+    depends_on:
+      - cockroach-init
+    restart: "no"
+
+  # RabbitMQ for your microservices
+  rabbitmq:
+    image: rabbitmq:3.11-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - cockroach-net
+
+  # Optional: HAProxy Load Balancer for CockroachDB (Production recommended)
+  haproxy:
+    image: haproxy:2.6
+    container_name: cockroach-haproxy
+    ports:
+      - "26260:26257"  # Load balanced port for applications
+      - "8404:8404"    # HAProxy stats
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - cockroach-net
+    depends_on:
+      - cockroach-node1
+      - cockroach-node2
+
+volumes:
+  cockroach-node1-data:
+  cockroach-node2-data:
+  rabbitmq-data:
+
+networks:
+  cockroach-net:
+    driver: bridge

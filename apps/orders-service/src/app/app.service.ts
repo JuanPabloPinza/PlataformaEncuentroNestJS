@@ -112,7 +112,15 @@ export class AppService {
       }
 
       console.log('🎉 Order creation completed successfully');
-      return this.mapOrderToResponse(await this.orderRepository.findById(order.id));
+      
+      // Find the created order with proper error handling
+      const createdOrder = await this.orderRepository.findById(order.id);
+      if (!createdOrder) {
+        console.error(`❌ Failed to retrieve created order with ID: ${order.id}`);
+        throw new Error(`Order was created but could not be retrieved. ID: ${order.id}`);
+      }
+      
+      return this.mapOrderToResponse(createdOrder);
     } catch (error) {
       console.error('💥 Error creating order:', error.message);
       console.error('📊 Error stack:', error.stack);
@@ -157,7 +165,7 @@ export class AppService {
     }
   }
 
-  async getOrderById(id: number): Promise<OrderResponseDto> {
+  async getOrderById(id: string | number): Promise<OrderResponseDto> {
     const order = await this.orderRepository.findById(id);
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
@@ -180,7 +188,7 @@ export class AppService {
     return orders.map(order => this.mapOrderToResponse(order));
   }
 
-  async cancelOrder(id: number): Promise<OrderResponseDto> {
+  async cancelOrder(id: string | number): Promise<OrderResponseDto> {
     const order = await this.orderRepository.findById(id);
     if (!order) {
       throw new NotFoundException(`Order with ID ${id} not found`);
@@ -226,7 +234,26 @@ export class AppService {
     return this.mapOrderToResponse(cancelledOrder);
   }
 
+  // Health check method for database connectivity
+  async healthCheck(): Promise<{ database: string; version: string }> {
+    try {
+      // Simple query to test database connectivity
+      const result = await this.orderRepository.query('SELECT version()');
+      return {
+        database: 'CockroachDB/PostgreSQL',
+        version: result[0]?.version || 'Unknown'
+      };
+    } catch (error) {
+      console.error('❌ Database health check failed:', error.message);
+      throw new Error(`Database connection failed: ${error.message}`);
+    }
+  }
+
   private mapOrderToResponse(order: Order): OrderResponseDto {
+    if (!order) {
+      throw new Error('Order is null or undefined');
+    }
+    
     return {
       id: order.id,
       userId: order.userId,
