@@ -10,6 +10,7 @@ export class AppService {
   constructor(
     private readonly orderRepository: OrderRepository,
     @Inject('EVENTS_SERVICE_CLIENT') private readonly eventsClient: ClientProxy,
+    @Inject('REALTIME_SERVICE_CLIENT') private readonly realtimeClient: ClientProxy,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
@@ -92,11 +93,66 @@ export class AppService {
       console.log('🔄 Updating order status to CONFIRMED...');
       await this.orderRepository.updateStatus(order.id, OrderStatus.CONFIRMED);
 
+      // Notify realtime service about the successful order
+      try {
+        console.log('📡 Notifying realtime service about order completion...');
+        await firstValueFrom(
+          this.realtimeClient.emit('order-completed', {
+            orderId: order.id,
+            eventId: createOrderDto.eventId,
+            categoryId: createOrderDto.categoryId,
+            quantity: createOrderDto.quantity,
+            userId: createOrderDto.userId,
+          })
+        );
+        console.log('✅ Realtime service notified');
+      } catch (notificationError) {
+        console.warn('⚠️ Failed to notify realtime service:', notificationError.message);
+        // Don't fail the order if notification fails
+      }
+
       console.log('🎉 Order creation completed successfully');
       return this.mapOrderToResponse(await this.orderRepository.findById(order.id));
     } catch (error) {
       console.error('💥 Error creating order:', error.message);
       console.error('📊 Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+  async createOrderWithLock(createOrderDto: CreateOrderDto & { lockId?: string }): Promise<OrderResponseDto> {
+    try {
+      console.log('🔐 Creating order with lock confirmation:', createOrderDto);
+
+      // If lockId is provided, confirm the lock first
+      if (createOrderDto.lockId) {
+        console.log('🔒 Confirming ticket lock:', createOrderDto.lockId);
+        try {
+          const lockConfirmed = await firstValueFrom(
+            this.realtimeClient.send('confirm-lock', {
+              lockId: createOrderDto.lockId,
+              userId: createOrderDto.userId,
+            })
+          );
+
+          if (!lockConfirmed) {
+            console.log('❌ Lock confirmation failed');
+            throw new BadRequestException('Ticket lock has expired or is invalid');
+          }
+          console.log('✅ Lock confirmed successfully');
+        } catch (lockError) {
+          console.error('❌ Error confirming lock:', lockError);
+          throw new BadRequestException('Failed to confirm ticket lock');
+        }
+      }
+
+      // Proceed with normal order creation
+      const order = await this.createOrder(createOrderDto);
+
+      console.log('🎉 Order with lock confirmation completed successfully');
+      return order;
+    } catch (error) {
+      console.error('💥 Error creating order with lock:', error.message);
       throw error;
     }
   }
@@ -148,6 +204,24 @@ export class AppService {
       OrderStatus.CANCELLED,
       'Order cancelled by user'
     );
+
+    // Notify realtime service about the cancellation
+    try {
+      console.log('📡 Notifying realtime service about order cancellation...');
+      await firstValueFrom(
+        this.realtimeClient.emit('order-cancelled', {
+          orderId: id,
+          eventId: order.eventId,
+          categoryId: order.categoryId,
+          quantity: order.quantity,
+          userId: order.userId,
+        })
+      );
+      console.log('✅ Realtime service notified about cancellation');
+    } catch (notificationError) {
+      console.warn('⚠️ Failed to notify realtime service about cancellation:', notificationError.message);
+      // Don't fail the cancellation if notification fails
+    }
 
     return this.mapOrderToResponse(cancelledOrder);
   }

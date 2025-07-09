@@ -1,24 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { Order } from './entities/order.entity';
-import { OrderRepository } from './repositories/order.repository';
+import { RealtimeGateway } from './gateways/realtime.gateway';
+import { TicketLockService } from './services/ticket-lock.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: '127.0.0.1',
-      port: 5432,
-      username: 'postgres',
-      password: 'password',
-      database: 'orders_db',
-      entities: [Order],
-      synchronize: true,
-    }),
-    TypeOrmModule.forFeature([Order]),
     ClientsModule.register([
       {
         name: 'EVENTS_SERVICE_CLIENT',
@@ -29,11 +17,11 @@ import { OrderRepository } from './repositories/order.repository';
         },
       },
       {
-        name: 'REALTIME_SERVICE_CLIENT',
+        name: 'ORDERS_SERVICE_CLIENT',
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://admin:admin@127.0.0.1:5672'],
-          queue: 'realtime_queue',
+          queue: 'orders_queue',
           queueOptions: {
             durable: true,
           },
@@ -42,6 +30,6 @@ import { OrderRepository } from './repositories/order.repository';
     ]),
   ],
   controllers: [AppController],
-  providers: [AppService, OrderRepository],
+  providers: [AppService, RealtimeGateway, TicketLockService],
 })
 export class AppModule {}

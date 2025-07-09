@@ -13,7 +13,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { AuthGuard } from '../../guards/auth/auth.guard';
 import { ORDER_SERVICE_RABBITMQ } from '../../constants';
-import { CreateOrderDto } from './dto/orders.dto';
+import { CreateOrderDto, CreateOrderWithLockDto } from './dto/orders.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -33,6 +33,21 @@ export class OrdersController {
 
     return await firstValueFrom(
       this.ordersClient.send('create-order', orderData)
+    );
+  }
+
+  @Post('with-lock')
+  @UseGuards(AuthGuard)
+  async createOrderWithLock(@Body() createOrderDto: CreateOrderWithLockDto, @Req() req) {
+    const userId = req.user.userId;
+    
+    const orderData = {
+      ...createOrderDto,
+      userId: userId,
+    };
+
+    return await firstValueFrom(
+      this.ordersClient.send('create-order-with-lock', orderData)
     );
   }
 

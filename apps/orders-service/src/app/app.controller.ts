@@ -12,6 +12,11 @@ export class AppController {
     return this.appService.createOrder(createOrderDto);
   }
 
+  @MessagePattern('create-order-with-lock')
+  async createOrderWithLock(@Payload() createOrderDto: CreateOrderDto & { lockId?: string }) {
+    return this.appService.createOrderWithLock(createOrderDto);
+  }
+
   @MessagePattern('get-order-by-id')
   async getOrderById(@Payload() id: number) {
     return this.appService.getOrderById(id);

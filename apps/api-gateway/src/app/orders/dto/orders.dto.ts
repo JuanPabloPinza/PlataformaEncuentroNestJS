@@ -5,6 +5,10 @@ export class CreateOrderDto {
   notes?: string;
 }
 
+export class CreateOrderWithLockDto extends CreateOrderDto {
+  lockId: string;
+}
+
 export class OrderResponseDto {
   id: number;
   userId: number;

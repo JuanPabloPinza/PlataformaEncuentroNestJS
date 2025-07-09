@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Tickets en Tiempo Real - Cliente de Pruebas</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .ticket-info {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .demo-step {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .demo-step.active {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        .demo-step.completed {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            opacity: 1 !important;
+        }
+        .step-number {
+            font-size: 18px;
+            margin-right: 10px;
+            min-width: 30px;
+        }
+        .step-text {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .step-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 12px;
+        }
+        .step-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .step-status {
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 80px;
+        }
+        .lock-timer {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .purchase-section {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎫 Sistema de Tickets en Tiempo Real - Cliente de Pruebas</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>Conexión y Eventos</h3>
+            
+            <div>
+                <label>ID de Usuario:</label>
+                <input type="number" id="userId" value="123" min="1">
+                
+                <label>ID de Evento:</label>
+                <input type="number" id="eventId" value="1" min="1">
+            </div>
+            
+            <div>
+                <button id="connectBtn" onclick="connect()">Conectar</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>Desconectar</button>
+                <button id="joinRoomBtn" onclick="joinEventRoom()" disabled>Unirse a Sala del Evento</button>
+            </div>
+            
+            <div id="connectionStatus" class="status disconnected">
+                Desconectado
+            </div>
+            
+            <h4>Controles de Tickets</h4>
+            <div>
+                <label>ID de Categoría:</label>
+                <input type="number" id="categoryId" value="2" min="1">
+                
+                <label>Cantidad:</label>
+                <input type="number" id="quantity" value="2" min="1" max="10">
+            </div>
+            
+            <div>
+                <button onclick="lockTickets()" disabled id="lockBtn">🔒 Bloquear Tickets</button>
+                <button onclick="unlockTickets()" disabled id="unlockBtn">🔓 Desbloquear Tickets</button>
+                <button onclick="getMyLocks()" disabled id="locksBtn">📋 Mis Bloqueos</button>
+            </div>
+            
+            <h4>Prueba de Flujo de Compra</h4>
+            <div>
+                <button onclick="testCompleteOrderFlow()" disabled id="orderFlowBtn">🛒 Probar Flujo de Compra Completo</button>
+                <div id="orderStatus" style="margin-top: 10px;"></div>
+            </div>
+            
+            <h4>🎯 Demostración Paso a Paso</h4>
+            <div id="stepByStepDemo" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <div style="margin-bottom: 15px;">
+                    <strong>Sigue estos pasos para ver el flujo de bloquear y comprar:</strong>
+                </div>
+                
+                <div class="demo-step" id="step1">
+                    <span class="step-number">1️⃣</span>
+                    <span class="step-text">Conectar al WebSocket</span>
+                    <button onclick="connect()" id="demoConnect" class="step-btn">Conectar</button>
+                    <span class="step-status" id="step1Status">⏳ Pendiente</span>
+                </div>
+                
+                <div class="demo-step" id="step2" style="opacity: 0.5;">
+                    <span class="step-number">2️⃣</span>
+                    <span class="step-text">Unirse a la Sala del Evento</span>
+                    <button onclick="joinEventRoom()" disabled id="demoJoin" class="step-btn">Unirse a Sala</button>
+                    <span class="step-status" id="step2Status">⏳ Esperando</span>
+                </div>
+                
+                <div class="demo-step" id="step3" style="opacity: 0.5;">
+                    <span class="step-number">3️⃣</span>
+                    <span class="step-text">Bloquear Tickets (Reserva por 5 min)</span>
+                    <button onclick="demoLockTickets()" disabled id="demoLock" class="step-btn">🔒 Bloquear</button>
+                    <span class="step-status" id="step3Status">⏳ Esperando</span>
+                </div>
+                
+                <div class="demo-step" id="step4" style="opacity: 0.5;">
+                    <span class="step-number">4️⃣</span>
+                    <span class="step-text">Comprar Tickets Bloqueados</span>
+                    <button onclick="demoBuyTickets()" disabled id="demoBuy" class="step-btn">💳 Comprar</button>
+                    <span class="step-status" id="step4Status">⏳ Esperando</span>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 4px;">
+                    <small><strong>💡 Consejo:</strong> ¡Intenta abrir varias pestañas del navegador para ver las actualizaciones de disponibilidad en tiempo real cuando un usuario bloquea/compra tickets!</small>
+                </div>
+                
+                <div style="margin-top: 10px; text-align: center;">
+                    <button onclick="resetDemo()" class="step-btn" style="background: #6c757d;">🔄 Reiniciar Demo</button>
+                </div>
+            </div>
+            
+            <div id="ticketInfo" class="ticket-info" style="display: none;">
+                <h5>Información del Bloqueo Actual:</h5>
+                <div id="lockDetails"></div>
+                <div id="lockTimer" class="lock-timer" style="display: none;">
+                    <div>⏰ El bloqueo expira en: <span id="timeRemaining" style="font-weight: bold; color: #d63384;"></span></div>
+                </div>
+            </div>
+            
+            <div id="purchaseSection" class="purchase-section">
+                <h5>🎫 Compra Tus Tickets Bloqueados</h5>
+                <div id="purchaseDetails"></div>
+                <div style="margin: 10px 0;">
+                    <label>Notas del Pedido:</label>
+                    <input type="text" id="orderNotes" placeholder="Notas opcionales para tu pedido" style="width: 100%; margin-top: 5px;">
+                </div>
+                <button onclick="demoBuyTickets()" id="purchaseBtn" class="step-btn" style="background: #007bff; padding: 10px 20px; font-size: 14px;">
+                    💳 Comprar Ahora
+                </button>
+                <div style="margin-top: 10px; font-size: 12px; color: #6c757d;">
+                    <strong>Nota:</strong> Esto creará un pedido real usando los tickets bloqueados.
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>Actualizaciones en Tiempo Real</h3>
+            <button onclick="clearLog()">Limpiar Registro</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+    
+    <div class="panel">
+        <h3>Actualizaciones de Disponibilidad</h3>
+        <div id="availabilityInfo">
+            <p>Únete a la sala de un evento para ver las actualizaciones de disponibilidad en tiempo real</p>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentLocks = [];
+        let lockTimerInterval = null;
+        let currentLockId = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        // Funciones específicas de la demo
+        function updateStepStatus(stepNumber, status, message) {
+            const stepElement = document.getElementById(`step${stepNumber}`);
+            const statusElement = document.getElementById(`step${stepNumber}Status`);
+            
+            if (status === 'completed') {
+                stepElement.classList.add('completed');
+                stepElement.classList.remove('active');
+                statusElement.textContent = message;
+                statusElement.style.color = '#28a745';
+            } else if (status === 'active') {
+                stepElement.classList.add('active');
+                stepElement.style.opacity = '1';
+                statusElement.textContent = message;
+                statusElement.style.color = '#ffc107';
+            } else if (status === 'error') {
+                statusElement.textContent = message;
+                statusElement.style.color = '#dc3545';
+            }
+        }
+        
+        function enableStep(stepNumber) {
+            const stepElement = document.getElementById(`step${stepNumber}`);
+            stepElement.style.opacity = '1';
+            updateStepStatus(stepNumber, 'active', '▶️ Listo');
+            
+            const buttons = {
+                2: 'demoJoin',
+                3: 'demoLock',
+                4: 'demoBuy'
+            };
+            
+            if (buttons[stepNumber]) {
+                document.getElementById(buttons[stepNumber]).disabled = false;
+            }
+        }
+        
+        function resetDemo() {
+            for (let i = 1; i <= 4; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                const statusElement = document.getElementById(`step${i}Status`);
+                
+                stepElement.classList.remove('completed', 'active');
+                if (i > 1) stepElement.style.opacity = '0.5';
+                
+                statusElement.textContent = i === 1 ? '⏳ Pendiente' : '⏳ Esperando';
+                statusElement.style.color = '#6c757d';
+            }
+            
+            ['demoJoin', 'demoLock', 'demoBuy'].forEach(id => {
+                document.getElementById(id).disabled = true;
+            });
+            
+            document.getElementById('purchaseSection').style.display = 'none';
+            if (lockTimerInterval) {
+                clearInterval(lockTimerInterval);
+                lockTimerInterval = null;
+            }
+            currentLockId = null;
+        }
+        
+        function demoLockTickets() {
+            updateStepStatus(3, 'active', '🔄 Bloqueando...');
+            lockTickets();
+        }
+        
+        async function demoBuyTickets() {
+            if (!currentLockId) {
+                alert('¡No hay tickets bloqueados actualmente!');
+                return;
+            }
+            
+            updateStepStatus(4, 'active', '🔄 Procesando...');
+            
+            try {
+                const orderData = {
+                    eventId: parseInt(document.getElementById('eventId').value),
+                    categoryId: parseInt(document.getElementById('categoryId').value),
+                    quantity: parseInt(document.getElementById('quantity').value),
+                    lockId: currentLockId,
+                    notes: document.getElementById('orderNotes').value || 'Compra de demostración desde el cliente de pruebas'
+                };
+                
+                log('💳 Creando pedido con los tickets bloqueados...', 'info');
+                
+                const orderResponse = await fetch('http://localhost:3000/api/orders/with-lock', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYXNpc3RlbnRlQGV4YW1wbGUuY29tIiwicm9sZSI6ImFzc2lzdGFudCIsImlhdCI6MTc1MjAzNjAzNywiZXhwIjoxNzUyMDM5NjM3fQ.5iHYN14TjRItgJBJGLJ98WhOGccZv8QxdRaNB13Wc6c'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                if (!orderResponse.ok) {
+                    throw new Error(`La creación del pedido falló: ${orderResponse.status} ${orderResponse.statusText}`);
+                }
+                
+                const order = await orderResponse.json();
+                log(`✅ ¡Pedido creado exitosamente! ID del Pedido: ${order.id}`, 'success');
+                updateStepStatus(4, 'completed', '✅ ¡Compra Completa!');
+                
+                document.getElementById('purchaseSection').style.display = 'none';
+                clearInterval(lockTimerInterval);
+                
+                const orderDetails = document.createElement('div');
+                orderDetails.innerHTML = `
+                    <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                        <h5 style="color: #155724; margin-top: 0;">🎉 ¡Pedido Exitoso!</h5>
+                        <p><strong>ID del Pedido:</strong> ${order.id}</p>
+                        <p><strong>Evento:</strong> ${order.eventName}</p>
+                        <p><strong>Categoría:</strong> ${order.categoryName}</p>
+                        <p><strong>Cantidad:</strong> ${order.quantity} tickets</p>
+                        <p><strong>Precio Total:</strong> $${order.totalPrice}</p>
+                        <p><strong>Estado:</strong> ${order.status}</p>
+                    </div>
+                `;
+                document.getElementById('step4').appendChild(orderDetails);
+                
+            } catch (error) {
+                log(`❌ La compra falló: ${error.message}`, 'error');
+                updateStepStatus(4, 'error', '❌ Compra Fallida');
+                alert(`La compra falló: ${error.message}`);
+            }
+        }
+        
+        function startLockTimer(expiresAt) {
+            const expirationTime = new Date(expiresAt);
+            document.getElementById('lockTimer').style.display = 'block';
+            
+            lockTimerInterval = setInterval(() => {
+                const now = new Date();
+                const timeLeft = expirationTime.getTime() - now.getTime();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(lockTimerInterval);
+                    document.getElementById('timeRemaining').textContent = 'EXPIRADO';
+                    document.getElementById('lockTimer').style.background = '#f8d7da';
+                    document.getElementById('purchaseBtn').disabled = true;
+                    log('⏰ ¡El bloqueo ha expirado!', 'error');
+                    return;
+                }
+                
+                const minutes = Math.floor(timeLeft / 60000);
+                const seconds = Math.floor((timeLeft % 60000) / 1000);
+                document.getElementById('timeRemaining').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function showPurchaseSection(lockResponse) {
+            const purchaseSection = document.getElementById('purchaseSection');
+            const purchaseDetails = document.getElementById('purchaseDetails');
+            
+            const estimatedQuantity = lockResponse.quantity || parseInt(document.getElementById('quantity').value);
+            const categoryId = parseInt(document.getElementById('categoryId').value);
+            const pricePerTicket = categoryId === 1 ? 150 : 75;
+            const totalPrice = estimatedQuantity * pricePerTicket;
+            
+            purchaseDetails.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div><strong>ID de Evento:</strong> ${document.getElementById('eventId').value}</div>
+                    <div><strong>ID de Categoría:</strong> ${categoryId}</div>
+                    <div><strong>Cantidad:</strong> ${estimatedQuantity} tickets</div>
+                    <div><strong>Precio por ticket:</strong> $${pricePerTicket}</div>
+                    <div style="grid-column: 1/-1; font-size: 18px; color: #007bff;"><strong>Total: $${totalPrice}</strong></div>
+                </div>
+                <div style="background: #fff3cd; padding: 8px; border-radius: 4px; font-size: 12px;">
+                    <strong>ID de Bloqueo:</strong> ${lockResponse.lockId}
+                </div>
+            `;
+            
+            purchaseSection.style.display = 'block';
+            document.getElementById('purchaseBtn').disabled = false;
+        }
+        
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            log(`Conectando como usuario ${userId}...`);
+            
+            socket = io('ws://localhost:8880/realtime', {
+                auth: {
+                    token: 'fake_jwt_token_for_testing'
+                },
+                query: {
+                    userId: userId
+                }
+            });
+            
+            socket.on('connect', () => {
+                log('Conectado al servicio de tiempo real', 'success');
+                updateConnectionStatus(true);
+                updateStepStatus(1, 'completed', '✅ Conectado');
+                enableStep(2);
+            });
+            
+            socket.on('disconnect', () => {
+                log('Desconectado del servicio de tiempo real', 'error');
+                updateConnectionStatus(false);
+                resetDemo();
+            });
+            
+            socket.on('connected', (data) => {
+                log(`El servidor confirmó la conexión: ${data.sessionId}`, 'success');
+            });
+            
+            socket.on('joined-event-room', (data) => {
+                log(`Se unió a la sala del evento ${data.eventId}`, 'success');
+                updateStepStatus(2, 'completed', '✅ Unido a Sala');
+                enableStep(3);
+            });
+            
+            socket.on('lock-tickets-response', (response) => {
+                if (response.success) {
+                    log(`✅ ¡Tickets bloqueados! ID de Bloqueo: ${response.lockId}`, 'success');
+                    log(`El bloqueo expira a las: ${new Date(response.expiresAt).toLocaleTimeString()}`, 'info');
+                    currentLockId = response.lockId;
+                    updateLockInfo(response);
+                    updateStepStatus(3, 'completed', '✅ Tickets Bloqueados');
+                    enableStep(4);
+                    startLockTimer(response.expiresAt);
+                    showPurchaseSection(response);
+                } else {
+                    log(`❌ Falló el bloqueo: ${response.message}`, 'error');
+                    updateStepStatus(3, 'error', '❌ Bloqueo Fallido');
+                }
+            });
+            
+            socket.on('unlock-tickets-response', (response) => {
+                if (response.success) {
+                    log(`🔓 Tickets desbloqueados exitosamente`, 'success');
+                    clearLockInfo();
+                } else {
+                    log(`❌ Falló el desbloqueo: ${response.message}`, 'error');
+                }
+            });
+            
+            socket.on('my-locks-response', (data) => {
+                currentLocks = data.locks;
+                log(`📋 Bloqueos actuales: ${data.locks.length}`, 'info');
+                data.locks.forEach(lock => {
+                    log(`  - Bloqueo ${lock.lockId}: Evento ${lock.eventId}, Categoría ${lock.categoryId}, Cant ${lock.quantity}`, 'info');
+                });
+            });
+            
+            socket.on('availability-update', (update) => {
+                log(`📊 Actualización de Disponibilidad - Evento ${update.eventId}, Categoría ${update.categoryId}: ${update.availableTickets} disponibles, ${update.lockedTickets} bloqueados`, 'info');
+                updateAvailabilityDisplay(update);
+            });
+            
+            socket.on('error', (error) => {
+                log(`❌ Error: ${error.message}`, 'error');
+            });
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateConnectionStatus(false);
+                log('Desconectado', 'info');
+            }
+        }
+        
+        function joinEventRoom() {
+            const eventId = parseInt(document.getElementById('eventId').value);
+            const userId = parseInt(document.getElementById('userId').value);
+            
+            if (socket && socket.connected) {
+                socket.emit('join-event-room', {
+                    eventId: eventId,
+                    userId: userId
+                });
+                log(`Uniéndose a la sala del evento ${eventId}...`);
+            }
+        }
+        
+        function lockTickets() {
+            const eventId = parseInt(document.getElementById('eventId').value);
+            const categoryId = parseInt(document.getElementById('categoryId').value);
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const userId = parseInt(document.getElementById('userId').value);
+            
+            if (socket && socket.connected) {
+                socket.emit('lock-tickets', {
+                    eventId: eventId,
+                    categoryId: categoryId,
+                    quantity: quantity,
+                    userId: userId
+                });
+                log(`Solicitando bloqueo para ${quantity} tickets en la categoría ${categoryId}...`);
+            }
+        }
+        
+        function unlockTickets() {
+            const eventId = parseInt(document.getElementById('eventId').value);
+            const categoryId = parseInt(document.getElementById('categoryId').value);
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const userId = parseInt(document.getElementById('userId').value);
+            
+            if (socket && socket.connected) {
+                socket.emit('unlock-tickets', {
+                    eventId: eventId,
+                    categoryId: categoryId,
+                    quantity: quantity,
+                    userId: userId
+                });
+                log(`Solicitando desbloqueo para ${quantity} tickets en la categoría ${categoryId}...`);
+            }
+        }
+        
+        function getMyLocks() {
+            if (socket && socket.connected) {
+                socket.emit('get-my-locks');
+                log('Solicitando bloqueos actuales...');
+            }
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const buttons = ['disconnectBtn', 'joinRoomBtn', 'lockBtn', 'unlockBtn', 'locksBtn', 'orderFlowBtn'];
+            
+            if (connected) {
+                statusDiv.textContent = 'Conectado';
+                statusDiv.className = 'status connected';
+                document.getElementById('connectBtn').disabled = true;
+                buttons.forEach(id => document.getElementById(id).disabled = false);
+            } else {
+                statusDiv.textContent = 'Desconectado';
+                statusDiv.className = 'status disconnected';
+                document.getElementById('connectBtn').disabled = false;
+                buttons.forEach(id => document.getElementById(id).disabled = true);
+                clearLockInfo();
+            }
+        }
+        
+        function updateLockInfo(lockResponse) {
+            const ticketInfo = document.getElementById('ticketInfo');
+            const lockDetails = document.getElementById('lockDetails');
+            
+            lockDetails.innerHTML = `
+                <p><strong>ID de Bloqueo:</strong> ${lockResponse.lockId}</p>
+                <p><strong>Expira:</strong> ${new Date(lockResponse.expiresAt).toLocaleString()}</p>
+                <p><strong>Tickets Disponibles:</strong> ${lockResponse.availableTickets}</p>
+            `;
+            
+            ticketInfo.style.display = 'block';
+        }
+        
+        function clearLockInfo() {
+            document.getElementById('ticketInfo').style.display = 'none';
+        }
+        
+        function updateAvailabilityDisplay(update) {
+            const availabilityDiv = document.getElementById('availabilityInfo');
+            const timestamp = new Date(update.timestamp).toLocaleTimeString();
+            
+            availabilityDiv.innerHTML += `
+                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                    <strong>Evento ${update.eventId} - Categoría ${update.categoryId}</strong><br>
+                    Disponibles: ${update.availableTickets} | Bloqueados: ${update.lockedTickets} | Total: ${update.totalTickets}<br>
+                    <small>Actualizado a las ${timestamp}</small>
+                </div>
+            `;
+        }
+        
+        async function testCompleteOrderFlow() {
+            const orderBtn = document.getElementById('orderFlowBtn');
+            const statusDiv = document.getElementById('orderStatus');
+            
+            orderBtn.disabled = true;
+            statusDiv.innerHTML = '<div style="color: blue;">🚀 Iniciando prueba de flujo de compra completo...</div>';
+            
+            try {
+                // Paso 1: Bloquear tickets
+                log('🔒 Paso 1: Bloqueando tickets...', 'info');
+                statusDiv.innerHTML += '<div>Paso 1: Bloqueando tickets...</div>';
+                
+                const lockPromise = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('Tiempo de espera para bloqueo agotado')), 10000);
+                    
+                    socket.once('lock-tickets-response', (response) => {
+                        clearTimeout(timeout);
+                        if (response.success) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(response.message));
+                        }
+                    });
+                });
+                
+                lockTickets();
+                const lockResponse = await lockPromise;
+                
+                log(`✅ Bloqueo exitoso: ${lockResponse.lockId}`, 'success');
+                statusDiv.innerHTML += '<div style="color: green;">✅ Paso 1 Completo: Tickets bloqueados</div>';
+                
+                // Paso 2: Crear orden con el bloqueo
+                log('🛒 Paso 2: Creando orden con el bloqueo...', 'info');
+                statusDiv.innerHTML += '<div>Paso 2: Creando orden con el bloqueo...</div>';
+                
+                const orderData = {
+                    eventId: parseInt(document.getElementById('eventId').value),
+                    categoryId: parseInt(document.getElementById('categoryId').value),
+                    quantity: parseInt(document.getElementById('quantity').value),
+                    lockId: lockResponse.lockId,
+                    notes: 'Orden de prueba desde el cliente de tiempo real'
+                };
+                
+                const orderResponse = await fetch('http://localhost:3000/api/orders/with-lock', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer test_token'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                if (!orderResponse.ok) {
+                    throw new Error(`La creación del pedido falló: ${orderResponse.status}`);
+                }
+                
+                const order = await orderResponse.json();
+                log(`✅ Pedido creado exitosamente: ${order.id}`, 'success');
+                statusDiv.innerHTML += '<div style="color: green;">✅ Paso 2 Completo: Pedido creado</div>';
+                
+                // Paso 3: Esperar confirmación en tiempo real
+                log('📡 Paso 3: Esperando confirmación en tiempo real...', 'info');
+                statusDiv.innerHTML += '<div>Paso 3: Esperando confirmación en tiempo real...</div>';
+                
+                const confirmationPromise = new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        resolve({ timeout: true });
+                    }, 15000);
+                    
+                    socket.once('order-completed', (data) => {
+                        clearTimeout(timeout);
+                        resolve(data);
+                    });
+                });
+                
+                const confirmation = await confirmationPromise;
+                
+                if (confirmation.timeout) {
+                    log('⚠️ No se recibió confirmación en tiempo real (timeout)', 'error');
+                    statusDiv.innerHTML += '<div style="color: orange;">⚠️ Paso 3: Timeout esperando confirmación</div>';
+                } else {
+                    log(`✅ Confirmación en tiempo real recibida para el pedido ${confirmation.orderId}`, 'success');
+                    statusDiv.innerHTML += '<div style="color: green;">✅ Paso 3 Completo: Confirmación en tiempo real recibida</div>';
+                }
+                
+                statusDiv.innerHTML += '<div style="color: green; font-weight: bold; margin-top: 10px;">🎉 ¡Prueba de flujo de compra completo finalizada exitosamente!</div>';
+                log('🎉 ¡Prueba de flujo de compra completo finalizada exitosamente!', 'success');
+                
+            } catch (error) {
+                log(`❌ La prueba de flujo de compra falló: ${error.message}`, 'error');
+                statusDiv.innerHTML += `<div style="color: red;">❌ La prueba falló: ${error.message}</div>`;
+            } finally {
+                orderBtn.disabled = false;
+            }
+        }
+        
+        window.onload = function() {
+            log('Cliente de pruebas cargado. Haz clic en Conectar para empezar.');
+        };
+    </script>
+</body>
+</html>
