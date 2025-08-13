@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/orders/dto/orders.dto.ts
 export class CreateOrderDto {
   eventId: number;
   categoryId: number;

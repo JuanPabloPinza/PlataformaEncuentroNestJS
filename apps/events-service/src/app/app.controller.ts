@@ -1,3 +1,4 @@
+// ruta de archivo: PlataformaEncuentroNestJS/apps/events-service/src/app/app.controller.ts
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AppService } from './app.service';
@@ -44,12 +45,36 @@ export class AppController {
 
   @MessagePattern('get-ticket-categories')
   async getTicketCategories(@Payload() eventId: number) {
-    return this.appService.getTicketCategories(eventId);
+    console.log(`\n📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊`);
+    console.log(`📊 [EVENTS SERVICE] GET-TICKET-CATEGORIES REQUEST RECEIVED!!!`);
+    console.log(`📊 [EVENTS SERVICE] Event ID: ${eventId}`);
+    console.log(`📊 [EVENTS SERVICE] Timestamp: ${new Date().toISOString()}`);
+    console.log(`📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊📊\n`);
+    
+    try {
+      const result = await this.appService.getTicketCategories(eventId);
+      console.log(`📊 [EVENTS SERVICE] Returning ticket categories:`, result);
+      return result;
+    } catch (error) {
+      console.error(`❌ [EVENTS SERVICE] Error getting ticket categories:`, error);
+      throw error;
+    }
   }
 
   @MessagePattern('reserve-tickets')
   async reserveTickets(@Payload() reserveTicketsDto: ReserveTicketsDto) {
-    return this.appService.reserveTickets(reserveTicketsDto);
+    console.log(`🎫 [EVENTS SERVICE] RECEIVED RESERVE-TICKETS REQUEST!`);
+    console.log(`🎫 [EVENTS SERVICE] Request data:`, JSON.stringify(reserveTicketsDto, null, 2));
+    console.log(`🎫 [EVENTS SERVICE] Timestamp:`, new Date().toISOString());
+    
+    try {
+      const result = await this.appService.reserveTickets(reserveTicketsDto);
+      console.log(`🎫 [EVENTS SERVICE] Reserve tickets result:`, result);
+      return result;
+    } catch (error) {
+      console.error(`❌ [EVENTS SERVICE] Reserve tickets error:`, error);
+      throw error;
+    }
   }
 
   @MessagePattern('release-tickets')

@@ -1,3 +1,4 @@
+// ruta de archivo: PlataformaEncuentroNestJS/apps/events-service/src/app/entities/ticket-category.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Event } from './event.entity';
 

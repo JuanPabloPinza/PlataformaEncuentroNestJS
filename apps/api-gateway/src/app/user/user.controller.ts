@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/user/user.controller.ts
 import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../guards/auth/auth.guard';
 import { ClientProxy } from '@nestjs/microservices';

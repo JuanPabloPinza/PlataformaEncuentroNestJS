@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/app.module.ts
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -9,9 +10,18 @@ import { EventsController } from './events/events.controller';
 import { OrdersController } from './orders/orders.controller';
 import { ORDER_SERVICE_RABBITMQ } from '../constants';
 import { RpcExceptionInterceptor } from '../interceptors/rpc-exception.interceptor';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    
+    // Configuración de los clientes de microservicios
+
     ClientsModule.register([
       {
         name: 'AUTH-SERVICE',

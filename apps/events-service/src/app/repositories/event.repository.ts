@@ -37,8 +37,16 @@ export class EventRepository {
     });
   }
 
-  async update(id: number, updateEventDto: Omit<UpdateEventDto, 'userContext'>): Promise<Event | null> {
-    await this.eventRepository.update(id, updateEventDto);
+  async update(id: number, updateEventDto: Omit<UpdateEventDto, 'userContext' | 'ticketCategories'>): Promise<Event | null> {
+    // Debug: Double-check that ticketCategories are not included
+    console.log('🔍 [Event Repository] Update data received:', updateEventDto);
+    
+    // Extra safety: remove ticketCategories if somehow they made it through
+    const { ticketCategories, ...safeUpdateData } = updateEventDto as any;
+    
+    console.log('🔍 [Event Repository] Safe update data (after filtering):', safeUpdateData);
+    
+    await this.eventRepository.update(id, safeUpdateData);
     return this.findById(id);
   }
 

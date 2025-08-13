@@ -13,7 +13,7 @@ import { OrderRepository } from './repositories/order.repository';
       host: '127.0.0.1',
       port: 5432,
       username: 'postgres',
-      password: 'password',
+      password: 'alex',
       database: 'orders_db',
       entities: [Order],
       synchronize: true,

@@ -12,7 +12,7 @@ import { UserRepository } from './user/user.repository';
       host: 'localhost',
       port: 5432,
       username: 'postgres', // change as needed
-      password: 'password', // change as needed
+      password: 'alex', // change as needed
       database: 'auth_db',  // same database as auth-service
       entities: [User],
       synchronize: true, // set to false in production

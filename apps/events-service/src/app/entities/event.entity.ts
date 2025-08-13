@@ -1,3 +1,4 @@
+// ruta de archivo: PlataformaEncuentroNestJS/apps/events-service/src/app/entities/event.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()

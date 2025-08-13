@@ -44,6 +44,30 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     try {
       console.log(`🔌 [Realtime Service] Client connected: ${client.id}`);
       
+          // Add a catch-all listener for ALL events to debug what's being received
+    client.onAny((event, ...args) => {
+      console.log(`� [CRITICAL] ${event.toUpperCase()} EVENT DETECTED IN CATCH-ALL LISTENER!!!`);
+      console.log(`🚨 [CRITICAL] Client ID: ${client.id}, User ID: ${client.userId}`);
+      console.log(`🚨 [CRITICAL] Event data:`, args);
+      
+      if (event === 'lock-tickets') {
+        console.log(`🚨 [DIRECT LISTENER] RECEIVED LOCK-TICKETS EVENT DIRECTLY!`);
+        console.log(`🚨 [DIRECT LISTENER] Data:`, args[0]);
+      }
+      
+      if (event === 'ping') {
+        console.log(`🏓 [PING TEST] RECEIVED PING EVENT!`);
+        console.log(`🏓 [PING TEST] Data:`, args[0]);
+        client.emit('pong', { message: 'Ping received successfully', data: args[0] });
+      }
+    });
+
+      // Add specific listener for lock-tickets to debug
+      client.on('lock-tickets', (data) => {
+        console.log(`🚨 [DIRECT LISTENER] RECEIVED LOCK-TICKETS EVENT DIRECTLY!`);
+        console.log(`🚨 [DIRECT LISTENER] Data:`, data);
+      });
+      
       // TODO: Authenticate user from JWT token in handshake
       // For now, we'll extract from query params
       const token = client.handshake.auth?.['token'] || client.handshake.query?.['token'];
@@ -169,6 +193,15 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: LockTicketsDto
   ) {
+    console.log(`\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨`);
+    console.log(`🚨 [BACKEND] ¡¡¡LOCK-TICKETS EVENT RECEIVED!!! `);
+    console.log(`🚨 [BACKEND] Client ID: ${client.id}`);
+    console.log(`🚨 [BACKEND] User ID: ${client.userId}`);
+    console.log(`🚨 [BACKEND] Socket connected: ${client.connected}`);
+    console.log(`🚨 [BACKEND] Data:`, JSON.stringify(data, null, 2));
+    console.log(`🚨 [BACKEND] Timestamp: ${new Date().toISOString()}`);
+    console.log(`🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n`);
+    
     try {
       console.log(`🔒 [Realtime Service] Lock tickets request from user ${client.userId}`);
 
@@ -188,8 +221,15 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
       const response = await this.ticketLockService.lockTickets(lockRequest);
 
+      console.log(`🚀 [CRITICAL] ABOUT TO SEND RESPONSE TO CLIENT ${client.id}:`);
+      console.log(`🚀 [CRITICAL] Response data:`, JSON.stringify(response, null, 2));
+      console.log(`🚀 [CRITICAL] Client connected:`, client.connected);
+      console.log(`🚀 [CRITICAL] Client socket exists:`, !!client);
+
       // Send response to the requesting client
       client.emit('lock-tickets-response', response);
+      
+      console.log(`✅ [CRITICAL] RESPONSE SENT TO CLIENT ${client.id}!`);
 
       if (response.success) {
         // Broadcast availability update to all users in the event room

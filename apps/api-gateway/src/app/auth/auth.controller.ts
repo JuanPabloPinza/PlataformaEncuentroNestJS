@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/auth/auth.controller.ts
 import { Body, Controller, Inject, Post } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';

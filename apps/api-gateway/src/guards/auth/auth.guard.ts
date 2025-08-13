@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/guards/auth/auth.guard.ts
 import {
   CanActivate,
   ExecutionContext,

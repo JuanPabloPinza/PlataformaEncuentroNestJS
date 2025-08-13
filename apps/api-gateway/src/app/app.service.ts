@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/app.service.ts
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

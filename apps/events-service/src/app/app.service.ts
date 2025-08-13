@@ -55,32 +55,96 @@ export class AppService {
   }
 
   async updateEvent(id: number, updateEventDto: UpdateEventDto): Promise<Event> {
-    console.log('✏️ [Events Service] Updating event:', id, 'by user:', updateEventDto.userContext.userId);
-    
-    // First check if event exists
-    const existingEvent = await this.eventRepository.findById(id);
-    if (!existingEvent) {
-      console.log('❌ [Events Service] Event not found:', id);
-      throw new NotFoundException(`Event with ID ${id} not found`);
-    }
-
-    // Check if user is the creator of the event
-    if (existingEvent.createdBy !== updateEventDto.userContext.userId) {
-      console.log('❌ [Events Service] Access denied: User', updateEventDto.userContext.userId, 'is not the creator of event', id);
-      throw new ForbiddenException('You can only edit events that you created');
-    }
-
-    console.log('✅ [Events Service] User authorized to update event');
-    
-    const { userContext, ...updateData } = updateEventDto;
-    const event = await this.eventRepository.update(id, updateData);
-    if (!event) {
-      throw new NotFoundException(`Event with ID ${id} not found`);
-    }
-    
-    console.log('🎉 [Events Service] Event updated successfully');
-    return event;
+  console.log('✏️ [Events Service] Updating event:', id, 'by user:', updateEventDto.userContext.userId);
+  
+  // First check if event exists
+  const existingEvent = await this.eventRepository.findById(id);
+  if (!existingEvent) {
+    console.log('❌ [Events Service] Event not found:', id);
+    throw new NotFoundException(`Event with ID ${id} not found`);
   }
+
+  // Check if user is the creator of the event
+  if (existingEvent.createdBy !== updateEventDto.userContext.userId) {
+    console.log('❌ [Events Service] Access denied: User', updateEventDto.userContext.userId, 'is not the creator of event', id);
+    throw new ForbiddenException('You can only edit events that you created');
+  }
+
+  console.log('✅ [Events Service] User authorized to update event');
+  
+  const { userContext, ticketCategories, ...updateData } = updateEventDto;
+  
+  // Debug: Log what's being sent to repository
+  console.log('🔍 [Events Service] Update data being sent to repository:', updateData);
+  console.log('🔍 [Events Service] Ticket categories extracted:', ticketCategories);
+  
+  // Update event basic data (excluding ticketCategories)
+  const event = await this.eventRepository.update(id, updateData);
+  if (!event) {
+    throw new NotFoundException(`Event with ID ${id} not found`);
+  }
+  
+  // Update ticket categories if provided
+  if (ticketCategories && ticketCategories.length > 0) {
+    console.log('🎫 [Events Service] Updating ticket categories');
+    console.log('🔍 [Events Service] Existing event has categories:', existingEvent.ticketCategories?.length || 0);
+    console.log('🔍 [Events Service] New categories to process:', ticketCategories.length);
+    
+    for (let i = 0; i < ticketCategories.length; i++) {
+      const categoryData = ticketCategories[i];
+      const existingCategory = existingEvent.ticketCategories?.[i];
+      
+      console.log('🔍 [Events Service] Category data:', categoryData);
+      console.log('🔍 [Events Service] Existing category full object:', existingCategory);
+      
+      // Try both possible ID field names
+      const categoryId = existingCategory?.idTicketCategory || existingCategory?.id;
+      
+      if (existingCategory && categoryId && categoryData) {
+        // UPDATE existing category
+        console.log('📝 [Events Service] Updating existing category at index:', i);
+        
+        // Filter out undefined/null values to avoid empty criteria error
+        const cleanCategoryData = Object.fromEntries(
+          Object.entries(categoryData).filter(([, value]) => value !== undefined && value !== null && value !== '')
+        );
+        
+        if (Object.keys(cleanCategoryData).length > 0) {
+          await this.ticketCategoryRepository.update(categoryId, cleanCategoryData);
+          console.log('✏️ [Events Service] Updated ticket category:', categoryId);
+        } else {
+          console.log('⚠️ [Events Service] Skipping empty category update for:', categoryId);
+        }
+      } else if (categoryData && categoryData.categoryName && categoryData.price !== undefined && categoryData.totalSeats !== undefined) {
+        // CREATE new category (only if required fields are present)
+        console.log('➕ [Events Service] Creating new category at index:', i);
+        
+        const newCategoryData = {
+          categoryName: categoryData.categoryName,
+          price: categoryData.price,
+          totalSeats: categoryData.totalSeats,
+          description: categoryData.description,
+          eventId: id, // Link to the event
+          isActive: true,
+          reservedSeats: 0 // Initialize reserved seats
+        };
+        
+        console.log('🔍 [Events Service] New category data:', newCategoryData);
+        
+        const newCategory = await this.ticketCategoryRepository.create(newCategoryData);
+        console.log('✅ [Events Service] Created new ticket category:', newCategory.id);
+      } else {
+        console.log('⚠️ [Events Service] Skipping category - missing required data at index:', i);
+        console.log('  - categoryName:', categoryData?.categoryName);
+        console.log('  - price:', categoryData?.price);
+        console.log('  - totalSeats:', categoryData?.totalSeats);
+      }
+    }
+  }
+  
+  console.log('🎉 [Events Service] Event updated successfully');
+  return this.eventRepository.findById(id);
+}
 
   async deleteEvent(id: number, userContext: UserContextDto): Promise<boolean> {
     console.log('🗑️ [Events Service] Deleting event:', id, 'by user:', userContext.userId);

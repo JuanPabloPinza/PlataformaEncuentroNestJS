@@ -1,3 +1,4 @@
+// ruta de archivo: PlataformaEncuentroNestJS/apps/auth-service/src/app/app.controller.ts
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';

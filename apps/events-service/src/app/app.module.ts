@@ -14,7 +14,7 @@ import { TicketCategoryRepository } from './repositories/ticket-category.reposit
       host: 'localhost',
       port: 5432,
       username: 'postgres', // change as needed
-      password: 'password', // change as needed
+      password: 'alex', // change as needed
       database: 'events_db', 
       entities: [Event, TicketCategory],
       synchronize: true, // set to false in production

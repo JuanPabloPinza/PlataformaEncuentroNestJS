@@ -1,3 +1,4 @@
+// Ruta de archivo: PlataformaEncuentroNestJS/apps/api-gateway/src/app/events/events.controller.ts
 import { 
   Controller, 
   Get, 

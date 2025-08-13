@@ -29,6 +29,7 @@ export class UpdateEventDto {
   eventDate?: Date;
   location?: string;
   isActive?: boolean;
+  ticketCategories?: UpdateTicketCategoryDto[];
   userContext: UserContextDto; // Add user context for authorization
 }
 
